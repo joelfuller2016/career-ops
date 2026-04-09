@@ -163,7 +163,7 @@ function runScript(scriptPath, args = []) {
       maxBuffer: 10 * 1024 * 1024,
     }, (error, stdout, stderr) => {
       const durationMs = Date.now() - start;
-      const exitCode = error ? (error.code ?? 1) : 0;
+      const exitCode = error ? (typeof error.code === 'number' ? error.code : 1) : 0;
       resolve({ stdout: stdout || '', stderr: stderr || '', exitCode, durationMs });
     });
   });
@@ -195,7 +195,7 @@ function runDashboard(args = []) {
       timeout: 0, // No timeout for TUI
     }, (error, stdout, stderr) => {
       const durationMs = Date.now() - start;
-      const exitCode = error ? (error.code ?? 1) : 0;
+      const exitCode = error ? (typeof error.code === 'number' ? error.code : 1) : 0;
       resolve({ stdout: stdout || '', stderr: stderr || '', exitCode, durationMs });
     });
   });
@@ -275,10 +275,13 @@ function buildSubcommandArgs(cmd) {
     // Find the index of 'evaluate' in rawArgs and pass everything after it
     const evalIdx = rawArgs.indexOf('evaluate');
     if (evalIdx >= 0) {
-      const evalArgs = rawArgs.slice(evalIdx + 1).filter(a => a !== '--json' && a !== '-j');
+      const evalArgs = rawArgs.slice(evalIdx + 1).filter(a =>
+        a !== '--json' && a !== '-j' &&
+        !a.startsWith('--career-ops-path') && !a.startsWith('-p=')
+      );
       args.push(...evalArgs);
     }
-    // Pass career-ops-path if specified
+    // Always pass the resolved career-ops-path (avoids double-passing)
     args.push(`--career-ops-path=${careerOpsPath}`);
     // If --json was set globally, pass it to evaluate too
     if (flags.json) args.push('--json');
@@ -307,19 +310,6 @@ async function main() {
     console.error(`Unknown command: ${subcommand}`);
     console.error('Run with --help to see available commands.');
     process.exit(1);
-  }
-
-  // Special case: evaluate — not yet built
-  if (subcommand === 'evaluate') {
-    const scriptPath = join(careerOpsPath, 'evaluate.mjs');
-    if (!existsSync(scriptPath)) {
-      if (flags.json) {
-        console.log(jsonWrap(false, 1, '', 'evaluate command not yet built', 0));
-      } else {
-        console.error('evaluate command not yet built');
-      }
-      process.exit(1);
-    }
   }
 
   // Special case: dashboard — runs Go binary, not Node script

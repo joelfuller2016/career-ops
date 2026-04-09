@@ -462,6 +462,10 @@ async function main() {
   let tracker = null;
   if (!flags['skip-tracker'] && report) {
     tracker = writeTrackerTSV(report, parsed);
+  } else if (!flags['skip-tracker'] && !report && flags['skip-report']) {
+    if (!flags.json) {
+      console.error('Note: --skip-report also skips tracker TSV (tracker needs report reference)');
+    }
   }
 
   // Step 8: Output result
